@@ -29,11 +29,11 @@ def human_susceptibility(age: int) -> float:
     # Mu=12, Sig=5, Alpha=3 creates a beautiful curve peaking around 14-16
     return skew_norm(age, mu=12.0, sig=5.0, alpha=3.0)
 
-def calculate_song_recognizability(song: Song, target_ages: list[int]) -> list[float]:
+def calculate_song_recognizability(song: Song, target_ages: list[int]) -> dict[int, float]:
     """
     Convolves the song's popularity over time with human memory susceptibility.
     
-    Returns a list of recognizability scores corresponding to the target_ages.
+    Returns a dict of age -> recognizability score for the target_ages.
     """
     provider = get_provider()
     year_range = list(range(HISTORICAL_YEAR_START, HISTORICAL_YEAR_END + 1))
@@ -41,7 +41,7 @@ def calculate_song_recognizability(song: Song, target_ages: list[int]) -> list[f
     # 1. Get the data-driven popularity curve for this song
     popularity_data = provider.get_popularity_timeseries(song, year_range)
     
-    recognizability_scores = []
+    recognizability_scores = {} 
     
     for age in target_ages:
         birth_year = CURRENT_YEAR - age
@@ -57,28 +57,28 @@ def calculate_song_recognizability(song: Song, target_ages: list[int]) -> list[f
             # The memory formed that year is popularity * how susceptible they were
             total_recognizability += (pop * susceptibility)
             
-        recognizability_scores.append(total_recognizability)
+        recognizability_scores[age] = total_recognizability
         
     return recognizability_scores
 
-def calculate_medley_recognizability(pieces: list[Piece], target_ages: list[int]) -> list[float]:
+def calculate_medley_recognizability(pieces: list[Piece], target_ages: list[int]) -> dict[int, float]:
     """
     Calculates the combined recognizability of an entire medley.
     """
     if not pieces:
-        return [0.0] * len(target_ages)
+        return {}
         
-    medley_scores = [0.0] * len(target_ages)
+    medley_scores = {}
     
     for piece in pieces:
         song_scores = calculate_song_recognizability(piece.song, target_ages)
         # Sum the scores element-wise
-        for i in range(len(target_ages)):
-            medley_scores[i] += song_scores[i]
+        for age in target_ages:
+            medley_scores[age] = medley_scores.get(age, 0.0) + song_scores[age]
             
     return medley_scores
 
-def calculate_audience_fit(medley_curve: list[float], audience_curve: list[float]) -> float:
+def calculate_audience_fit(medley_curve: dict[int, float], audience_curve: dict[int, float]) -> float:
     """
     Calculates the dot product of the medley's recognizability curve 
     and the audience's demographic age distribution.
@@ -86,5 +86,15 @@ def calculate_audience_fit(medley_curve: list[float], audience_curve: list[float
     if len(medley_curve) != len(audience_curve):
         raise ValueError("Curves must be the same length to calculate fit.")
         
-    fit_score = sum(m * a for m, a in zip(medley_curve, audience_curve))
+    fit_score = sum(m * a for m, a in zip(medley_curve.values(), audience_curve.values()))
     return fit_score
+
+def normalize_distribution(curve: dict[int, float]) -> dict[int, float]:
+    """
+    Normalizes a discrete distribution so that its values sum to 1.0.
+    Handles cases where the sum is 0 to avoid division by zero.
+    """
+    total = sum(curve.values())
+    if total == 0:
+        return {k: 0.0 for k in curve}
+    return {k: v / total for k, v in curve.items()}
