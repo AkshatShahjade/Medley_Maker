@@ -4,7 +4,7 @@ from storage.initialize_sql import initialize_db
 from storage.seeding import seed_db
 from storage.crud import search_songs, search_pieces, search_medleys, save, delete, get_all
 from storage.sql_schema import Song, Piece, Medley
-from visualization import visualize
+from visualization import visualize, visualize_human_susceptibility, visualize_song_popularity
 
 class MedleyCLI(cmd.Cmd):
     intro = "Welcome to Medley Maker CLI.\nType 'help' or '?' to list commands."
@@ -94,6 +94,30 @@ class MedleyCLI(cmd.Cmd):
             visualize(arg)
         except Exception as e:
             print(f"Failed to visualize: {e}")
+
+    def do_math(self, arg):
+        """Visualize math models. Usage: math <"human" | song_id>"""
+        arg = arg.strip().lower()
+        if not arg:
+            print("Usage: math human OR math <song_id>")
+            return
+            
+        if arg == "human":
+            print("Visualizing human memory susceptibility...")
+            visualize_human_susceptibility()
+        else:
+            try:
+                song_id = int(arg)
+                records = [s for s in search_songs() if s.id == song_id]
+                if records:
+                    print(f"Visualizing historical popularity for Song '{records[0].name}'...")
+                    visualize_song_popularity(records[0])
+                else:
+                    print(f"No song found with ID {song_id}.")
+            except ValueError:
+                print("Argument must be 'human' or a valid integer song ID.")
+            except Exception as e:
+                print(f"Failed to visualize: {e}")
 
     def do_EOF(self, arg):
         """Exit the CLI."""
