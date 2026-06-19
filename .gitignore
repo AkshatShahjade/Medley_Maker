@@ -1,3 +1,11 @@
-/architecture_diagram.md
-/main.py
-/venv
+main.py
+
+*.mmd
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+*.db
+.env
+.vscode/
+.idea/
