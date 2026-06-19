@@ -1,0 +1,3 @@
+- each piece in the medley contributes equally
+- each pieces from the same song contribute equally
+- 
